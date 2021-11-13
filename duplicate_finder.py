@@ -3,7 +3,7 @@
 A tool to find and remove duplicate pictures.
 
 Usage:
-    duplicate_finder.py add <path> ... [--db=<db_path>] [--parallel=<num_processes>]
+    duplicate_finder.py add <path> ... [--db=<db_path>] [--parallel=<num_processes>] [--hash-size=<power_of_2>]
     duplicate_finder.py remove <path> ... [--db=<db_path>]
     duplicate_finder.py clear [--db=<db_path>]
     duplicate_finder.py show [--db=<db_path>]
@@ -17,6 +17,8 @@ Options:
 
     --parallel=<num_processes> The number of parallel processes to run to hash the image
                                files (default: number of CPUs).
+    
+    --hash-size=<power_of_2>  ImageHash pHash size (default: 8)
 
     find:
         --print               Only print duplicate files rather than displaying HTML file
@@ -42,6 +44,7 @@ from flask_cors import CORS
 import imagehash
 from jinja2 import FileSystemLoader, Environment
 from more_itertools import chunked
+from itertools import repeat
 from PIL import Image, ExifTags
 import pymongo
 from termcolor import cprint
@@ -64,7 +67,7 @@ def connect_to_db(db_conn_string='./db'):
         if not os.path.isdir(db_conn_string):
             os.makedirs(db_conn_string)
 
-        p = Popen(['mongod', '--dbpath', db_conn_string], stdout=PIPE, stderr=PIPE)
+        p = Popen(['mongod', '--dbpath', db_conn_string], stdout=PIPE, stderr=PIPE, shell=True)
 
         try:
             p.wait(timeout=2)
@@ -115,7 +118,7 @@ def get_image_files(path):
                 yield file
 
 
-def hash_file(file):
+def hash_file(file, hash_size=8):
     try:
         hashes = []
         img = Image.open(file)
@@ -130,7 +133,7 @@ def hash_file(file):
                 turned_img = img.rotate(angle, expand=True)
             else:
                 turned_img = img
-            hashes.append(str(imagehash.phash(turned_img)))
+            hashes.append(str(imagehash.phash(turned_img, hash_size)))
 
         hashes = ''.join(sorted(hashes))
 
@@ -143,7 +146,7 @@ def hash_file(file):
 
 def hash_files_parallel(files, num_processes=None):
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
-        for result in executor.map(hash_file, files):
+        for result in executor.map(hash_file, files, repeat(HASH_SIZE)):
             if result is not None:
                 yield result
 
@@ -325,6 +328,8 @@ def get_capture_time(img):
     except:
         return "Time unknown"
 
+def next_power_of_2(x):
+    return 1 if x == 0 else 2**math.ceil(math.log2(x))
 
 if __name__ == '__main__':
     from docopt import docopt
@@ -344,6 +349,11 @@ if __name__ == '__main__':
         NUM_PROCESSES = int(args['--parallel'])
     else:
         NUM_PROCESSES = None
+
+    if args['--hash-size']:
+        HASH_SIZE = next_power_of_2(int(args['--hash-size']))
+    else:
+        HASH_SIZE = 8
 
     with connect_to_db(db_conn_string=DB_PATH) as db:
         if args['add']:

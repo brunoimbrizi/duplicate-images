@@ -1,5 +1,27 @@
 # Duplicate Image Finder
 
+## Changes in this fork
+
+- Bump versions in `requirements.txt`
+- Add `shell=True` to `Popen`
+- Add parameter `--hash-size=<power_of_two>` (default: 8)
+
+#### Python + MongoDB
+
+- [Python 3.7](https://www.python.org/downloads/)
+- [MongoDB](https://www.mongodb.com/try/download/enterprise)
+
+
+#### Option with Virtual Environment
+```
+virtualenv -p python3.7 venv
+source venv/bin/activate
+pip install -r reqirements.txt
+```
+On Windows use `source venv/Scripts/activate`
+
+---
+
 ![](https://api.travis-ci.org/philipbl/duplicate-images.svg)
 
 This Python script finds duplicate images using a [perspective hash (pHash)](http://www.phash.org) to compare images. pHash ignores the image size and file size and instead creates a hash based on the pixels of the image. This allows you to find duplicate pictures that have been rotated, have changed metadata, and slightly edited.
