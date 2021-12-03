@@ -16,9 +16,16 @@
 ```
 virtualenv -p python3.7 venv
 source venv/bin/activate
-pip install -r reqirements.txt
+pip install -r requirements.txt
 ```
 On Windows use `source venv/Scripts/activate`
+
+### Run
+```
+python duplicate_finder add <path>
+
+python duplicate_finder find
+```
 
 ---
 
